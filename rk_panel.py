@@ -19,8 +19,14 @@ def photo_url(it):
     return re.sub(r"\?_ex=\d+x\d+", "?_ex=500x500", u)
 
 
+def who_key(who):
+    """話者名のゆれ(hero / タクミ / ネコ店長 / cat など)を hero か neko にそろえる"""
+    w = str(who).lower()
+    return "neko" if any(k in w for k in ("neko", "ネコ", "猫", "cat")) else "hero"
+
+
 def bubble(pos, who, text, width):
-    name, color = CHAR.get(who, CHAR["hero"])
+    name, color = CHAR[who_key(who)]
     return (f'<div style="position:absolute;{pos};max-width:{width};background:{color};'
             f'color:#222;border:2.5px solid #222;border-radius:16px;padding:5px 9px;'
             f'font-size:13px;font-weight:700;line-height:1.45"><small>{name}</small>'
