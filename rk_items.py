@@ -1,28 +1,41 @@
 import datetime, os
 import requests
 
-RANKING_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628"
-GENRES = {"家電": "211742", "日用品": "215783", "インテリア・寝具": "100804",
-          "ダイエット・健康": "100938", "美容・コスメ": "100939", "食品": "100227"}
-SEASON = {10: ["加湿", "ヒーター", "毛布", "乾燥"], 11: ["ヒーター", "毛布", "おせち", "ギフト"],
-          12: ["おせち", "福袋", "ギフト", "大掃除"]}
+# 楽天APIは2026年に刷新(旧app.rakuten.co.jp系は廃止)。新: applicationId + accessKey + Referer
+SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
+SITE = "https://yayama4976.github.io/manga-affiliate/"
+KEYWORDS = {
+    10: ["加湿器", "電気毛布", "セラミックヒーター", "ハンドクリーム", "着る毛布"],
+    11: ["電気毛布", "ホットカーペット", "おせち", "ギフト", "家電 ブラックフライデー"],
+    12: ["福袋", "おせち", "大掃除 洗剤", "ホットカーペット", "ギフト"],
+}
+DEFAULT = ["加湿器", "ブランケット", "収納ボックス", "掃除グッズ", "コーヒー"]
 POSTS_PER_RUN = 3
 
 
-def fetch_ranking(gid):
-    r = requests.get(RANKING_URL, timeout=20, params={
-        "applicationId": os.environ["RAKUTEN_APP_ID"],
-        "affiliateId": os.environ["RAKUTEN_AFFILIATE_ID"], "genreId": gid, "format": "json"})
+def search(keyword):
+    r = requests.get(SEARCH_URL, timeout=20,
+                     headers={"Referer": os.environ.get("SITE_URL") or SITE},
+                     params={"applicationId": os.environ["RAKUTEN_APP_ID"].strip(),
+                             "accessKey": os.environ["RAKUTEN_ACCESS_KEY"].strip(),
+                             "affiliateId": os.environ["RAKUTEN_AFFILIATE_ID"].strip(),
+                             "keyword": keyword, "hits": 20, "sort": "-reviewCount",
+                             "format": "json", "formatVersion": 2})
+    if r.status_code != 200:
+        print("rakuten error:", keyword, r.status_code, r.text[:200])
     r.raise_for_status()
-    return [i["Item"] for i in r.json().get("Items", [])]
+    return [i.get("Item", i) for i in r.json().get("Items", [])]
+
+
+def num(it, key):
+    try:
+        return float(it.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def score(it):
-    s = (31 - it.get("rank", 30)) * 2 + min(it.get("reviewCount", 0), 1000) / 50
-    s += max(it.get("reviewAverage", 0) - 4.0, 0) * 10
-    if any(k in it["itemName"] for k in SEASON.get(datetime.date.today().month, [])):
-        s += 15
-    return s
+    return min(num(it, "reviewCount"), 2000) / 40 + max(num(it, "reviewAverage") - 4.0, 0) * 20
 
 
 def pick_items(posted):
@@ -30,10 +43,18 @@ def pick_items(posted):
         return [{"itemCode": "test:001", "itemName": "超音波式 卓上加湿器 6畳対応(テスト商品)",
                  "itemPrice": 3980, "reviewAverage": 4.5, "reviewCount": 120,
                  "genre": "家電", "affiliateUrl": "#", "itemUrl": "#"}]
-    pool = []
-    for name, gid in GENRES.items():
-        for it in fetch_ranking(gid):
-            if it["itemCode"] not in posted and it.get("reviewAverage", 0) >= 4.0:
-                it["genre"] = name
-                pool.append(it)
-    return sorted(pool, key=score, reverse=True)[:POSTS_PER_RUN]
+    month = datetime.date.today().month
+    picks, seen = [], set(posted)
+    for kw in KEYWORDS.get(month, DEFAULT):
+        try:
+            cands = [it for it in search(kw) if it.get("itemCode") not in seen
+                     and num(it, "reviewAverage") >= 4.2 and num(it, "reviewCount") >= 30]
+        except Exception as e:
+            print("search skip:", kw, type(e).__name__)
+            continue
+        if cands:
+            best = max(cands, key=score)
+            best["genre"] = kw
+            seen.add(best["itemCode"])
+            picks.append(best)
+    return sorted(picks, key=score, reverse=True)[:POSTS_PER_RUN]
