@@ -1,23 +1,26 @@
-import json, os
+import json, os, re
 import requests
 
+BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-def pick_model():
-    """使えるGeminiのflash系モデルを自動で探す"""
-    r = requests.get("https://generativelanguage.googleapis.com/v1beta/models", timeout=30,
+
+def list_models():
+    """使えるflash系モデルを、使いやすい順に並べる"""
+    r = requests.get(BASE, timeout=30,
                      params={"key": os.environ["GEMINI_API_KEY"], "pageSize": 200})
     r.raise_for_status()
     names = [m["name"].split("/")[-1] for m in r.json().get("models", [])
              if "generateContent" in m.get("supportedGenerationMethods", [])]
-    bad = ("lite", "image", "tts", "live", "audio", "thinking", "exp", "latest", "robotics")
-    flash = [n for n in names if "flash" in n and not any(b in n for b in bad)]
-    stable = sorted([n for n in flash if "preview" not in n], reverse=True)
-    preview = sorted([n for n in flash if "preview" in n], reverse=True)
-    pool = stable + preview
-    if not pool:
-        raise RuntimeError("flashモデルが見つかりません: " + ", ".join(names[:15]))
-    print("gemini model:", pool[0])
-    return pool[0]
+    bad = ("lite", "image", "tts", "live", "audio", "thinking", "exp",
+           "latest", "robotics", "omni")
+    flash = [n for n in names if re.match(r"gemini-\d", n) and "flash" in n
+             and not any(b in n for b in bad)]
+    ver = lambda n: tuple(int(x) for x in re.findall(r"\d+", n))
+    plain = sorted([n for n in flash if "preview" not in n], key=ver, reverse=True)
+    prev = sorted([n for n in flash if "preview" in n], key=ver, reverse=True)
+    pool = (plain + prev)[:5]
+    print("candidates:", pool)
+    return pool
 
 
 def write_script(it):
@@ -31,12 +34,18 @@ image_promptは英語で、そのコマの情景・構図・表情を具体的�
 形式: {{"title":"悩み系キーワード入りタイトル",
 "panels":[{{"image_prompt":"...","lines":[{{"who":"hero","text":"..."}}],"caption":""}}x4],
 "points":["選ぶポイント3つ"],"for":"向く人","not_for":"向かない人"}}"""
-    model = pick_model()
-    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{model}:generateContent?key={os.environ['GEMINI_API_KEY']}")
-    r = requests.post(url, timeout=90, json={
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"}})
-    r.raise_for_status()
-    parts = r.json()["candidates"][0]["content"]["parts"]
-    return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
+    last = None
+    for model in list_models():
+        url = f"{BASE}/{model}:generateContent?key={os.environ['GEMINI_API_KEY']}"
+        r = requests.post(url, timeout=90, json={
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseMimeType": "application/json"}})
+        if r.status_code in (400, 403, 404, 429):
+            print("model skipped:", model, r.status_code)
+            last = r.status_code
+            continue
+        r.raise_for_status()
+        parts = r.json()["candidates"][0]["content"]["parts"]
+        print("gemini model:", model)
+        return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
+    raise RuntimeError(f"使えるモデルがありません(最後のエラー: {last})")
