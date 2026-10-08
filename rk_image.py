@@ -13,9 +13,11 @@ NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold
 
 def gen_image(scene, path):
     scene = scene.replace("hero", HERO).replace("Hero", HERO).replace("neko", NEKO).replace("Neko", NEKO)
-    url = (f"https://api.cloudflare.com/client/v4/accounts/{os.environ['CF_ACCOUNT_ID']}"
+    acct = "".join(os.environ["CF_ACCOUNT_ID"].split())
+    token = "".join(os.environ["CF_API_TOKEN"].split())   # 改行・空白を全部除く
+    url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
-    head = {"Authorization": f"Bearer {os.environ['CF_API_TOKEN']}"}
+    head = {"Authorization": f"Bearer {token}"}
     for attempt in range(3):
         try:
             r = requests.post(url, timeout=120, headers=head,
