@@ -2,9 +2,8 @@ import base64, io, os, re, time
 import requests
 from PIL import Image
 
-STYLE = ("classic hand-drawn Japanese anime style, 4-koma comic panel, clean outlines, "
-         "warm natural colors, soft lighting, detailed everyday background, "
-         "no text, no letters, no speech bubbles")
+STYLE = ("classic hand-drawn Japanese anime illustration, clean outlines, warm natural colors, "
+         "soft lighting, simple minimal background with plain walls, medium close-up of the characters")
 HERO = ("Takumi, a 30-year-old Japanese man, short messy wavy dark brown hair, thick eyebrows, "
         "small goatee on the chin, warm tan skin, gentle smile, beige crew-neck t-shirt")
 NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold bell, "
