@@ -6,7 +6,7 @@ on:
         description: "テスト実行(楽天IDなし・1本だけ生成)"
         type: boolean
         default: true
-  # 楽天IDを登録したら、下の2行の先頭の # を消すと毎朝7時(JST)に自動実行されます
+  # 楽天キーを登録して本番で確認できたら、下の2行の先頭の # を消すと毎朝7時(JST)に自動実行されます
   # schedule:
   #   - cron: "0 22 * * *"
 permissions:
@@ -24,6 +24,7 @@ jobs:
         env:
           TEST_MODE: ${{ inputs.test && '1' || '' }}
           RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
