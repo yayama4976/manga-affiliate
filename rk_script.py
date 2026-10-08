@@ -18,7 +18,7 @@ def list_models():
     ver = lambda n: tuple(int(x) for x in re.findall(r"\d+", n))
     plain = sorted([n for n in flash if "preview" not in n], key=ver, reverse=True)
     prev = sorted([n for n in flash if "preview" in n], key=ver, reverse=True)
-    pool = (plain + prev)[:5]
+    pool = (plain + prev)[:6]
     print("candidates:", pool)
     return pool
 
@@ -37,15 +37,25 @@ image_promptは英語で、そのコマの情景・構図・表情を具体的�
     last = None
     for model in list_models():
         url = f"{BASE}/{model}:generateContent?key={os.environ['GEMINI_API_KEY']}"
-        r = requests.post(url, timeout=90, json={
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"responseMimeType": "application/json"}})
-        if r.status_code in (400, 403, 404, 429):
+        try:
+            r = requests.post(url, timeout=90, json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json"}})
+        except requests.RequestException as e:
+            print("model error:", model, type(e).__name__)
+            last = "network"
+            continue
+        if r.status_code != 200:
             print("model skipped:", model, r.status_code)
             last = r.status_code
             continue
-        r.raise_for_status()
-        parts = r.json()["candidates"][0]["content"]["parts"]
+        try:
+            parts = r.json()["candidates"][0]["content"]["parts"]
+            data = json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
+        except Exception as e:
+            print("bad response:", model, type(e).__name__)
+            last = "format"
+            continue
         print("gemini model:", model)
-        return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
+        return data
     raise RuntimeError(f"使えるモデルがありません(最後のエラー: {last})")
