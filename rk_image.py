@@ -1,4 +1,4 @@
-import base64, io, os, time
+import base64, io, os, re, time
 import requests
 from PIL import Image
 
@@ -12,12 +12,19 @@ NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold
 _checked = []
 
 
-def diag(acct, token):
-    """原因調査用: 長さとトークンの有効性だけを表示(値は表示しない)"""
+def clean_token(raw):
+    """貼り付けに余計な文字(Bearer, 引用符など)が混ざっていても、トークン本体だけ取り出す"""
+    runs = re.findall(r"[A-Za-z0-9_\-]{30,}", raw)
+    return runs[-1] if runs else "".join(raw.split())
+
+
+def diag(acct, raw, token):
+    """原因調査用: 長さと有効性だけを表示(値は表示しない)"""
     if _checked:
         return
     _checked.append(1)
-    print("diag len acct/token:", len(acct), len(token))
+    extra = sorted(set(re.findall(r"[^A-Za-z0-9_\-\s]", raw)))
+    print("diag len acct/raw/token:", len(acct), len(raw), len(token), "extra chars:", extra)
     try:
         v = requests.get("https://api.cloudflare.com/client/v4/user/tokens/verify",
                          headers={"Authorization": f"Bearer {token}"}, timeout=20)
@@ -29,8 +36,9 @@ def diag(acct, token):
 def gen_image(scene, path):
     scene = scene.replace("hero", HERO).replace("Hero", HERO).replace("neko", NEKO).replace("Neko", NEKO)
     acct = "".join(os.environ["CF_ACCOUNT_ID"].split())
-    token = "".join(os.environ["CF_API_TOKEN"].split())
-    diag(acct, token)
+    raw = os.environ["CF_API_TOKEN"]
+    token = clean_token(raw)
+    diag(acct, raw, token)
     url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
     head = {"Authorization": f"Bearer {token}"}
