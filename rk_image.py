@@ -1,14 +1,20 @@
 import base64, io, os, re, time
 import requests
 from PIL import Image
+from rk_check import has_text
 
-STYLE = ("classic hand-drawn Japanese anime illustration, clean outlines, warm natural colors, "
-         "soft lighting, simple minimal background with plain walls, medium close-up of the characters")
+STYLE = ("classic hand-drawn Japanese anime illustration, clean outlines, "
+         "warm natural colors, soft lighting, detailed everyday background")
+BAN = re.compile(r"\b((speech|thought|dialogue)\s+bubbles?|word\s+balloons?|captions?|"
+                 r"sound\s+effects?|onomatopoeia|subtitles?|signs?|text|letters?|writing|"
+                 r"manga|comic|4-koma|panels?|"
+                 r"say|says|saying|said|shout\w*|yell\w*|exclaim\w*|whisper\w*|mutter\w*)\b", re.I)
+DANGLE = re.compile(r"\b(with an?|and|while|that|who)\s*(?=[,.;]|$)", re.I)
+QUOTED = re.compile(r'["\u201c\u201d][^"\u201c\u201d]*["\u201c\u201d]')
 HERO = ("Takumi, a 30-year-old Japanese man, short messy wavy dark brown hair, thick eyebrows, "
         "small goatee on the chin, warm tan skin, gentle smile, beige crew-neck t-shirt")
 NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold bell, "
         "smug half-closed eyes")
-_checked = []
 
 
 def clean_token(raw):
@@ -17,31 +23,17 @@ def clean_token(raw):
     return runs[-1] if runs else "".join(raw.split())
 
 
-def diag(acct, raw, token):
-    """原因調査用: 長さと有効性だけを表示(値は表示しない)"""
-    if _checked:
-        return
-    _checked.append(1)
-    extra = sorted(set(re.findall(r"[^A-Za-z0-9_\-\s]", raw)))
-    print("diag len acct/raw/token:", len(acct), len(raw), len(token), "extra chars:", extra)
-    try:
-        v = requests.get("https://api.cloudflare.com/client/v4/user/tokens/verify",
-                         headers={"Authorization": f"Bearer {token}"}, timeout=20)
-        print("diag verify:", v.status_code, v.text[:150])
-    except Exception as e:
-        print("diag verify error:", type(e).__name__)
-
-
 def gen_image(scene, path):
+    scene = BAN.sub("", QUOTED.sub("", scene))
+    scene = re.sub(r"\s{2,}", " ", DANGLE.sub("", scene)).strip()
     scene = scene.replace("hero", HERO).replace("Hero", HERO).replace("neko", NEKO).replace("Neko", NEKO)
     acct = "".join(os.environ["CF_ACCOUNT_ID"].split())
     raw = os.environ["CF_API_TOKEN"]
     token = clean_token(raw)
-    diag(acct, raw, token)
     url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
     head = {"Authorization": f"Bearer {token}"}
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             r = requests.post(url, timeout=120, headers=head,
                               json={"prompt": f"{STYLE}. {scene}", "steps": 6})
@@ -52,6 +44,9 @@ def gen_image(scene, path):
             img = Image.open(io.BytesIO(base64.b64decode(r.json()["result"]["image"])))
             img = img.convert("RGB")
             img.thumbnail((640, 640))
+            if attempt < 3 and has_text(img):   # 文字や吹き出しが描かれていたら描き直す
+                print("text in image, redraw:", attempt + 1)
+                continue
             img.save(path, "WEBP", quality=80)
             return True
         except Exception as e:
