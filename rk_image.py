@@ -15,6 +15,7 @@ HERO = ("Takumi, a 30-year-old Japanese man, short messy wavy dark brown hair, t
         "small goatee on the chin, warm tan skin, gentle smile, beige crew-neck t-shirt")
 NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold bell, "
         "smug half-closed eyes")
+_quota = []   # Cloudflareの上限(429)に達したら、以降の画像生成を止める
 
 
 def clean_token(raw):
@@ -24,6 +25,8 @@ def clean_token(raw):
 
 
 def gen_image(scene, path):
+    if _quota:
+        return False
     scene = BAN.sub("", QUOTED.sub("", scene))
     scene = re.sub(r"\s{2,}", " ", DANGLE.sub("", scene)).strip()
     scene = scene.replace("hero", HERO).replace("Hero", HERO).replace("neko", NEKO).replace("Neko", NEKO)
@@ -33,10 +36,14 @@ def gen_image(scene, path):
     url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
     head = {"Authorization": f"Bearer {token}"}
-    for attempt in range(4):
+    for attempt in range(2):
         try:
             r = requests.post(url, timeout=120, headers=head,
                               json={"prompt": f"{STYLE}. {scene}", "steps": 6})
+            if r.status_code == 429:
+                print("Cloudflare 429: 無料枠の上限(または混雑)。画像づくりを止めます")
+                _quota.append(1)
+                return False
             if r.status_code in (401, 403):
                 print("image auth error:", r.status_code, r.text[:200])
                 return False
@@ -44,7 +51,7 @@ def gen_image(scene, path):
             img = Image.open(io.BytesIO(base64.b64decode(r.json()["result"]["image"])))
             img = img.convert("RGB")
             img.thumbnail((640, 640))
-            if attempt < 3 and has_text(img):   # 文字や吹き出しが描かれていたら描き直す
+            if attempt < 1 and has_text(img):   # 文字や吹き出しが描かれていたら描き直す
                 print("text in image, redraw:", attempt + 1)
                 continue
             img.save(path, "WEBP", quality=80)
