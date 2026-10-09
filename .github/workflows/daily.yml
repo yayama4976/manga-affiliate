@@ -25,6 +25,7 @@ jobs:
       - run: pip install requests pillow
       - run: python rakuten_free_bot.py
         env:
+          PYTHONDONTWRITEBYTECODE: "1"
           TEST_MODE: ${{ inputs.test && '1' || '' }}
           RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
           RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
@@ -35,7 +36,8 @@ jobs:
       - run: |
           git config user.name "bot"
           git config user.email "bot@example.com"
+          git rm -r -q -f __pycache__ 2>/dev/null || true
           git add docs posted.json
           git commit -m "daily update" || true
-          git pull --rebase origin main
-          git push || (git pull --rebase origin main && git push)
+          git pull --rebase --autostash origin main
+          git push || (git pull --rebase --autostash origin main && git push)
