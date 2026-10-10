@@ -1,4 +1,4 @@
-import datetime, os
+import datetime, os, re, time
 import requests
 
 # 楽天APIは2026年に刷新(旧app.rakuten.co.jp系は廃止)。新: applicationId + accessKey + Referer
@@ -13,18 +13,42 @@ DEFAULT = ["加湿器", "ブランケット", "収納ボックス", "掃除グ�
 POSTS_PER_RUN = 3
 
 
+_ok = []   # 通ったReferer(サイトURLの書き方)を覚えておく
+
+
+def referers():
+    base = (os.environ.get("SITE_URL") or SITE).strip()
+    host = re.sub(r"^(https?://[^/]+).*", r"\1", base)
+    out = [base, host + "/", host]
+    if _ok:
+        out = [_ok[0]] + [o for o in out if o != _ok[0]]
+    return out
+
+
 def search(keyword):
-    r = requests.get(SEARCH_URL, timeout=20,
-                     headers={"Referer": os.environ.get("SITE_URL") or SITE},
-                     params={"applicationId": os.environ["RAKUTEN_APP_ID"].strip(),
-                             "accessKey": os.environ["RAKUTEN_ACCESS_KEY"].strip(),
-                             "affiliateId": os.environ["RAKUTEN_AFFILIATE_ID"].strip(),
-                             "keyword": keyword, "hits": 20, "sort": "-reviewCount",
-                             "format": "json", "formatVersion": 2})
-    if r.status_code != 200:
-        print("rakuten error:", keyword, r.status_code, r.text[:200])
-    r.raise_for_status()
-    return [i.get("Item", i) for i in r.json().get("Items", [])]
+    params = {"applicationId": os.environ["RAKUTEN_APP_ID"].strip(),
+              "accessKey": os.environ["RAKUTEN_ACCESS_KEY"].strip(),
+              "affiliateId": os.environ["RAKUTEN_AFFILIATE_ID"].strip(),
+              "keyword": keyword, "hits": 20, "sort": "-reviewCount",
+              "format": "json", "formatVersion": 2}
+    r = None
+    for ref in referers():
+        origin = re.sub(r"^(https?://[^/]+).*", r"\1", ref)
+        for _ in range(3):
+            time.sleep(1.3)   # 1秒に1回までの制限(QPS=1)を守る
+            r = requests.get(SEARCH_URL, timeout=20, params=params,
+                             headers={"Referer": ref, "Origin": origin})
+            if r.status_code != 429:
+                break
+            print("rakuten 429: 少し待って再試行")
+            time.sleep(2)
+        if r.status_code == 200:
+            _ok[:] = [ref]
+            return [i.get("Item", i) for i in r.json().get("Items", [])]
+        print("rakuten error:", keyword, ref, r.status_code, " ".join(r.text.split())[:140])
+        if r.status_code != 403:
+            break
+    raise RuntimeError(f"rakuten {r.status_code}")
 
 
 def num(it, key):
