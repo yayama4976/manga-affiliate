@@ -36,7 +36,8 @@ def gen_image(scene, path):
     url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
     head = {"Authorization": f"Bearer {token}"}
-    for attempt in range(2):
+    redrawn = False
+    for attempt in range(4):
         try:
             r = requests.post(url, timeout=120, headers=head,
                               json={"prompt": f"{STYLE}. {scene}", "steps": 6})
@@ -47,16 +48,20 @@ def gen_image(scene, path):
             if r.status_code in (401, 403):
                 print("image auth error:", r.status_code, r.text[:200])
                 return False
-            r.raise_for_status()
+            if r.status_code != 200:
+                print("image http error:", r.status_code, r.text[:200])
+                time.sleep(5)
+                continue
             img = Image.open(io.BytesIO(base64.b64decode(r.json()["result"]["image"])))
             img = img.convert("RGB")
             img.thumbnail((640, 640))
-            if attempt < 1 and has_text(img):   # 文字や吹き出しが描かれていたら描き直す
-                print("text in image, redraw:", attempt + 1)
+            if not redrawn and has_text(img):   # 文字や吹き出しが描かれていたら1回だけ描き直す
+                redrawn = True
+                print("text in image, redraw")
                 continue
             img.save(path, "WEBP", quality=80)
             return True
         except Exception as e:
-            print("image retry:", e)
+            print("image retry:", type(e).__name__, str(e)[:150])
             time.sleep(5)
     return False
