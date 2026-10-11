@@ -1,7 +1,7 @@
 import datetime, os, re, time
 import requests
 
-SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
+SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
 SITE = "https://yayama4976.github.io/manga-affiliate/"
 KEYWORDS = {
     10: ["加湿器", "電気毛布", "セラミックヒーター", "ハンドクリーム", "着る毛布"],
