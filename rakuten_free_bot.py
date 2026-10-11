@@ -27,6 +27,7 @@ def main():
             posts.append({"slug": slug, "title": d["title"], "date": str(datetime.date.today())})
             posted.append(it["itemCode"])
             print("generated:", slug)
+            break
         except Exception as e:
             print("skip:", it["itemCode"], e)
     json.dump(posted, open("posted.json", "w"))
