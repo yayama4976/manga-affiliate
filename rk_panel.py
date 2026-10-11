@@ -27,16 +27,16 @@ def who_key(who):
 
 def bubble(pos, who, text, width):
     name, color = CHAR[who_key(who)]
-    return (f'<div style="position:absolute;{pos};max-width:{width};background:{color};'
-            f'color:#222;border:2.5px solid #222;border-radius:16px;padding:5px 9px;'
-            f'font-size:13px;font-weight:700;line-height:1.45"><small>{name}</small>'
-            f'<br>{html.escape(nm(text))}</div>')
+    return (f'<div style="position:absolute;{pos};max-width:{width};box-sizing:border-box;'
+            f'background:{color};color:#222;border:2.5px solid #222;border-radius:16px;'
+            f'padding:5px 9px;font-size:13px;font-weight:700;line-height:1.45">'
+            f'<small>{name}</small><br>{html.escape(nm(text))}</div>')
 
 
 def panel_html(i, p, ok, it, link):
     photo_on = i == 2 and bool(photo_url(it))
     if photo_on:
-        pos, width = ["bottom:8px;left:8px", "bottom:8px;right:8px"], "46%"
+        pos, width = ["bottom:8px;left:8px", "bottom:8px;right:8px"], "47%"
     else:
         pos, width = ["top:8px;left:8px", "bottom:8px;right:8px"], "62%"
     if ok:
@@ -46,10 +46,10 @@ def panel_html(i, p, ok, it, link):
     bubbles = "".join(bubble(ps, ln["who"], ln["text"], width)
                       for ln, ps in zip(p["lines"][:2], pos))
     photo = ""
-    if photo_on:   # 3コマ目: 楽天の実物写真を合成
+    if photo_on:   # 3コマ目: 楽天の実物写真を左上に小さく合成
         photo = (f'<a href="{link}" rel="nofollow sponsored" target="_blank" '
-                 f'style="position:absolute;left:50%;top:6%;transform:translateX(-50%);'
-                 f'width:44%;background:#fff;border:3px solid #222;border-radius:8px;padding:4px">'
+                 f'style="position:absolute;left:8px;top:8px;box-sizing:border-box;'
+                 f'width:34%;background:#fff;border:3px solid #222;border-radius:8px;padding:4px">'
                  f'<img src="{photo_url(it)}" alt="商品写真" style="width:100%;display:block"></a>')
     cap = ""
     if p.get("caption"):   # キャプションは絵の下に別帯で表示(吹き出しと重ならない)
