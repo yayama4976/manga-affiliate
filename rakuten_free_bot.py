@@ -27,6 +27,7 @@ def main():
             posts.append({"slug": slug, "title": d["title"], "date": str(datetime.date.today())})
             posted.append(it["itemCode"])
             print("generated:", slug)
+            print("x post:\n" + d.get("x_post", "") + "\nhttps://yayama4976.github.io/manga-affiliate/posts/" + slug + "/")
             break
         except Exception as e:
             print("skip:", it["itemCode"], e)
