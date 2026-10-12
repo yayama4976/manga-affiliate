@@ -1,5 +1,6 @@
 import json, os, re
 import requests
+from rk_prompt import build_prompt
 
 BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
@@ -24,27 +25,14 @@ def list_models():
 
 
 def write_script(it):
-    prompt = f"""楽天商品の紹介を4コマ漫画の台本にしてください。JSONのみ出力。
-商品名: {it['itemName']} / 価格: {it['itemPrice']}円 / レビュー: {it['reviewAverage']}({it['reviewCount']}件)
-キャラ: hero=ちょっとズボラな在宅ワーカーの男性 / neko=物知りで毒舌なネコ店長
-構成: 1=悩み 2=深掘り・失敗談 3=商品登場 4=オチ
-ルール:
-- セリフは最大2個・1個25字以内。声に出して自然な日本語にする(翻訳調・不自然な助詞・原因と結果のズレは禁止)
-- 悪い例「コップに水置いたらこぼした」→良い例「コップの水をキーボードにこぼした…」
-- 笑えるオチ。誇大表現・効果効能の断定禁止。商品情報にない事実は書かない
-- キャプションは20字以内。セリフやキャプションに hero/neko は使わず、タクミ/ネコ店長と書く
-- 書いたあと全セリフを読み直し、不自然なら直してから出力
-image_promptは英語で、そのコマの情景・構図・表情を具体的に(文字は入れない、キャラ名は hero/neko と書く)
-形式: {{"title":"悩み系キーワード入りタイトル",
-"panels":[{{"image_prompt":"...","lines":[{{"who":"hero","text":"..."}}],"caption":""}}x4],
-"points":["選ぶポイント3つ"],"for":"向く人","not_for":"向かない人"}}"""
+    prompt = build_prompt(it)
     last = None
     for model in list_models():
         url = f"{BASE}/{model}:generateContent?key={os.environ['GEMINI_API_KEY']}"
         try:
             r = requests.post(url, timeout=90, json={
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.6}})
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.8}})
         except requests.RequestException as e:
             print("model error:", model, type(e).__name__)
             last = "network"
