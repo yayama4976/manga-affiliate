@@ -15,6 +15,6 @@ def build_prompt(it):
 - 書いたあと全セリフを読み直し、不自然なら直してから出力
 - image_promptにはキャラの髪型・服装・毛色・顔つきを書かない。背景・構図・表情・ポーズだけ書く
 image_promptは英語で、そのコマの情景・構図・表情を具体的に(文字は入れない、キャラ名は hero/neko と書く)
-形式: {{"title":…
+形式: {{"title":"悩み系キーワード入りタイトル",
 "panels":[{{"image_prompt":"...","lines":[{{"who":"hero","text":"..."}},{{"who":"neko","text":"..."}}],"caption":""}}x4],
 "points":["選ぶポイント3つ"],"for":"向く人","not_for":"向かない人","x_post":"..."}}"""
