@@ -11,28 +11,41 @@ BAN = re.compile(r"\b((speech|thought|dialogue)\s+bubbles?|word\s+balloons?|capt
                  r"say|says|saying|said|shout\w*|yell\w*|exclaim\w*|whisper\w*|mutter\w*)\b", re.I)
 DANGLE = re.compile(r"\b(with an?|and|while|that|who)\s*(?=[,.;]|$)", re.I)
 QUOTED = re.compile(r'["\u201c\u201d][^"\u201c\u201d]*["\u201c\u201d]')
+APPEAR = re.compile(r"\b(wearing|dressed in)\b[^,.;]*|"
+                    r"\b(orange|ginger|calico|tabby|striped|spotted|brown|black|"
+                    r"blue|green|red|pink|purple|yellow)\b", re.I)
 HERO = ("Takumi, a 30-year-old Japanese man, short messy wavy dark brown hair, thick eyebrows, "
         "small goatee on the chin, warm tan skin, gentle smile, beige crew-neck t-shirt")
 NEKO = ("Neko-tencho, a chubby gray tabby cat with a red collar and a small gold bell, "
         "smug half-closed eyes")
-_quota = []   # Cloudflareの上限(429)に達したら、以降の画像生成を止める
+_quota = []
 
 
 def clean_token(raw):
-    """貼り付けに余計な文字(Bearer, 引用符など)が混ざっていても、トークン本体だけ取り出す"""
     runs = re.findall(r"[A-Za-z0-9_\-]{30,}", raw)
     return runs[-1] if runs else "".join(raw.split())
+
+
+def build_prompt(scene):
+    scene = BAN.sub("", QUOTED.sub("", scene))
+    scene = re.sub(r"\s{2,}", " ", DANGLE.sub("", scene)).strip()
+    low = scene.lower()
+    cast = [d for k, d in (("hero", HERO), ("neko", NEKO)) if k in low]
+    scene = APPEAR.sub("", scene)
+    scene = re.sub(r"(?i)hero", "Takumi", scene)
+    scene = re.sub(r"(?i)neko", "Neko-tencho", scene)
+    scene = re.sub(r"\s{2,}", " ", scene).strip()
+    if not cast:
+        return f"{STYLE}. {scene}"
+    return f"{STYLE}. Characters: {' ; '.join(cast)}. Scene: {scene}"
 
 
 def gen_image(scene, path):
     if _quota:
         return False
-    scene = BAN.sub("", QUOTED.sub("", scene))
-    scene = re.sub(r"\s{2,}", " ", DANGLE.sub("", scene)).strip()
-    scene = scene.replace("hero", HERO).replace("Hero", HERO).replace("neko", NEKO).replace("Neko", NEKO)
+    full = build_prompt(scene)
     acct = "".join(os.environ["CF_ACCOUNT_ID"].split())
-    raw = os.environ["CF_API_TOKEN"]
-    token = clean_token(raw)
+    token = clean_token(os.environ["CF_API_TOKEN"])
     url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
            "/ai/run/@cf/black-forest-labs/flux-1-schnell")
     head = {"Authorization": f"Bearer {token}"}
@@ -40,7 +53,7 @@ def gen_image(scene, path):
     for attempt in range(4):
         try:
             r = requests.post(url, timeout=120, headers=head,
-                              json={"prompt": f"{STYLE}. {scene}", "steps": 6})
+                              json={"prompt": full, "steps": 6})
             if r.status_code == 429:
                 print("Cloudflare 429: 無料枠の上限(または混雑)。画像づくりを止めます")
                 _quota.append(1)
@@ -55,7 +68,7 @@ def gen_image(scene, path):
             img = Image.open(io.BytesIO(base64.b64decode(r.json()["result"]["image"])))
             img = img.convert("RGB")
             img.thumbnail((640, 640))
-            if not redrawn and has_text(img):   # 文字や吹き出しが描かれていたら1回だけ描き直す
+            if not redrawn and has_text(img):
                 redrawn = True
                 print("text in image, redraw")
                 continue
