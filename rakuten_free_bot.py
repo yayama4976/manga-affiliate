@@ -5,6 +5,7 @@ from rk_image import gen_image
 from rk_page import page_html, rebuild_index
 
 DOCS = "docs"
+SITE = "https://yayama4976.github.io/manga-affiliate/posts/"
 
 
 def main():
@@ -27,7 +28,8 @@ def main():
             posts.append({"slug": slug, "title": d["title"], "date": str(datetime.date.today())})
             posted.append(it["itemCode"])
             print("generated:", slug)
-            print("x post:\n" + d.get("x_post", "") + "\nhttps://yayama4976.github.io/manga-affiliate/posts/" + slug + "/")
+            print("x post:\n" + d.get("x_post", "") + "\n\n👇続きは記事で(1分で読めます)\n"
+                  + SITE + slug + "/\n\n#PR #AI生成画像")
             break
         except Exception as e:
             print("skip:", it["itemCode"], e)
