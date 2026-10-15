@@ -1,6 +1,8 @@
 import html
 from rk_panel import panel_html
 
+BEACON = ("<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' "
+          "data-cf-beacon='{\"token\": \"91e943fc7eb34515b77fa7332ea95bbc\"}'></script>")
 CSS = ('body{font-family:"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.7;'
        'max-width:720px;margin:0 auto;padding:16px}'
        '.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));'
@@ -26,7 +28,7 @@ def page_html(it, d, oks):
             f'({it["reviewCount"]}件)※掲載時点</small></p>'
             f'<a class="c" href="{link}" rel="nofollow sponsored" target="_blank">'
             '楽天市場で価格・在庫を見る</a><p><a href="../../index.html">← 記事一覧へ</a></p>'
-            '</body></html>')
+            f'{BEACON}</body></html>')
 
 
 def rebuild_index(posts, docs):
@@ -37,4 +39,4 @@ def rebuild_index(posts, docs):
                 '<body style="font-family:sans-serif;max-width:720px;margin:0 auto;padding:16px">'
                 '<h1>4コマでわかる!おすすめ商品</h1>'
                 '<p><small>※当サイトはアフィリエイト広告を含みます</small></p>'
-                f'<ul>{items}</ul></body></html>')
+                f'<ul>{items}</ul>{BEACON}</body></html>')
