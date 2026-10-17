@@ -5,8 +5,7 @@ from rk_keywords import KEYWORDS, DEFAULT
 SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
 SITE = "https://yayama4976.github.io/manga-affiliate/"
 POSTS_PER_RUN = 3
-MIN_PRICE, MAX_PRICE = 1000, 6000
-
+MIN_PRICE, MAX_PRICE = 2000, 15000
 
 _shown = []
 UUID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
