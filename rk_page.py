@@ -32,8 +32,15 @@ def page_html(it, d, oks):
 
 
 def rebuild_index(posts, docs):
-    items = "".join(f'<li><a href="posts/{p["slug"]}/index.html">{html.escape(p["title"])}</a> '
-                    f'<small>{p["date"]}</small></li>' for p in reversed(posts))
+    rows = []
+    for p in reversed(posts):
+        g = p.get("genre", "")
+        tag = (f'<small style="color:#bf0000;font-weight:bold">🏷 {html.escape(g)}</small><br>'
+               if g else "")
+        rows.append(f'<li style="margin-bottom:14px">{tag}'
+                    f'<a href="posts/{p["slug"]}/index.html">{html.escape(p["title"])}</a> '
+                    f'<small>{p["date"]}</small></li>')
+    items = "".join(rows)
     with open(f"{docs}/index.html", "w", encoding="utf-8") as f:
         f.write(f'{HEAD}<title>4コマでわかる!おすすめ商品</title></head>'
                 '<body style="font-family:sans-serif;max-width:720px;margin:0 auto;padding:16px">'
