@@ -25,7 +25,8 @@ def main():
                 continue
             with open(f"{DOCS}/posts/{slug}/index.html", "w", encoding="utf-8") as f:
                 f.write(page_html(it, d, oks))
-            posts.append({"slug": slug, "title": d["title"], "date": str(datetime.date.today())})
+            posts.append({"slug": slug, "title": d["title"], "genre": it.get("genre", ""),
+                          "date": str(datetime.date.today())})
             posted.append(it["itemCode"])
             print("generated:", slug)
             print("x post:\n" + d.get("x_post", "") + "\n\n👇続きは記事で(1分で読めます)\n"
