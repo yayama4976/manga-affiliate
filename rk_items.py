@@ -6,6 +6,8 @@ SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260
 SITE = "https://yayama4976.github.io/manga-affiliate/"
 POSTS_PER_RUN = 3
 MIN_PRICE, MAX_PRICE = 2000, 15000
+NG = re.compile(r"福袋|限定|OFF|セール|SALE|クーポン|ポイント.?倍|訳あり|アウトレット|予約|半額", re.I)
+SUMMER = re.compile(r"保冷|冷却|冷感|ネッククーラー|扇風機|ハンディファン|日傘|日焼け|UVカット|虫よけ|氷のう|ひんやり")
 
 _shown = []
 UUID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
@@ -54,6 +56,7 @@ def num(it, key):
 
 def score(it):
     return min(num(it, "reviewCount"), 2000) / 40 + max(num(it, "reviewAverage") - 4.0, 0) * 20
+# ---- pick ----
 
 
 def pick_items(posted):
@@ -62,6 +65,7 @@ def pick_items(posted):
                  "itemPrice": 3980, "reviewAverage": 4.5, "reviewCount": 120,
                  "genre": "家電", "affiliateUrl": "#", "itemUrl": "#"}]
     today = datetime.date.today()
+    winter = today.month in (10, 11, 12, 1, 2, 3)
     kws = list(KEYWORDS.get(today.month, DEFAULT))
     k = today.toordinal() % len(kws)
     kws = kws[k:] + kws[:k]   # 毎日、先頭のテーマが変わる
@@ -72,6 +76,8 @@ def pick_items(posted):
         try:
             cands = [it for it in search(kw) if it.get("itemCode") not in seen
                      and MIN_PRICE <= num(it, "itemPrice") <= MAX_PRICE
+                     and not NG.search(it.get("itemName", ""))
+                     and not (winter and SUMMER.search(it.get("itemName", "")))
                      and num(it, "reviewAverage") >= 4.2 and num(it, "reviewCount") >= 30]
         except Exception as e:
             print("search skip:", kw, type(e).__name__)
@@ -81,4 +87,4 @@ def pick_items(posted):
             best["genre"] = kw
             seen.add(best["itemCode"])
             picks.append(best)
-    return picks
+    return picks    
