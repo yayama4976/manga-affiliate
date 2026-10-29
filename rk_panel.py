@@ -8,7 +8,14 @@ def nm(s):
     return (s.replace("hero", "タクミ").replace("Hero", "タクミ")
              .replace("neko", "ネコ店長").replace("Neko", "ネコ店長"))
 
+_nm_old = nm
 
+
+def nm(s):
+    """吹き出しの文頭の「タクミ「」「ネコ店長「」と末尾の「」」を取る"""
+    s = _nm_old(s)
+    m = re.match(r"^\s*(?:タクミ|ネコ店長)\s*[「『](.*)[」』]\s*$", s, re.S)
+    return m.group(1) if m else s
 def photo_url(it):
     """楽天の商品写真(サムネ128pxを500pxに差し替え)。APIの形式違い(文字列/辞書)に対応"""
     imgs = it.get("mediumImageUrls") or []
