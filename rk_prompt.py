@@ -22,4 +22,4 @@ def build_prompt(it):
 image_promptは英語で、そのコマの情景・構図・表情を具体的に(文字は入れない、キャラ名は hero/neko と書く)
 形式: {{"title":"商品名のカテゴリ+おすすめ+特徴を入れた30字以内のタイトル(例:電気毛布のおすすめ|丸洗い・USB給電タイプ)",
 "panels":[{{"image_prompt":"...","lines":[{{"who":"hero","text":"..."}},{{"who":"neko","text":"..."}}],"caption":""}}x4],
-"points":["選ぶポイント3つ"],"for":"向く人","not_for":"向かない人","x_post":"..."}}""
+"points":["選ぶポイント3つ"],"for":"向く人","not_for":"向かない人","x_post":"..."}}"""
