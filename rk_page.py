@@ -23,14 +23,14 @@ def page_html(it, d, oks):
             '画像の一部はAIで生成しています。</small></p>'
             f'<h1>{t}</h1>'
             f'<p><a class="c" href="{link}" rel="nofollow sponsored" target="_blank">'
-            '楽天市場で価格・在庫を見る</a></p>'
+            'この商品の価格・在庫を楽天で確認する</a></p>'
             f'<div class="g">{grid}</div><h2>選ぶポイント</h2><ul>{pts}</ul>'
             f'<p><b>向いている人:</b>{html.escape(d["for"])}<br>'
             f'<b>向かない人:</b>{html.escape(d["not_for"])}</p>'
             f'<p><small>参考価格 {it["itemPrice"]:,}円 / レビュー {it["reviewAverage"]}'
             f'({it["reviewCount"]}件)※掲載時点</small></p>'
             f'<a class="c" href="{link}" rel="nofollow sponsored" target="_blank">'
-            '楽天市場で価格・在庫を見る</a><p><a href="../../index.html">← 記事一覧へ</a></p>'
+            'この商品の価格・在庫を楽天で確認する</a><p><a href="../../index.html">← 記事一覧へ</a></p>'
             f'{BEACON}</body></html>')
 
 
